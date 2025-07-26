@@ -1,4 +1,6 @@
 const { Client, LocalAuth } = require('whatsapp-web.js')
+const cron = require('node-cron')
+
 const qrcode = require('qrcode-terminal')
 const axios = require('axios')
 const fs = require('fs')
@@ -50,16 +52,11 @@ client.on('qr', qr => qrcode.generate(qr, { small: true }))
 client.on('ready', () => console.log('Bot pronto!'))
 // Agendamento diário do evangelho
 const verificarHorario = async () => {
-  const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-  const [_, horaStr] = agora.split(', ')
-  const [hora, minuto] = horaStr.split(':').map(Number)
+  try {
+    const { data } = await axios.get('https://liturgia.up.railway.app/v2/')
+    const ev = data.leituras.evangelho[0]
 
-  if (hora === 7 && minuto === 0) {
-    try {
-      const { data } = await axios.get('https://liturgia.up.railway.app/v2/')
-      const ev = data.leituras.evangelho[0]
-
-      const mensagem = `
+    const mensagem = `
 📖 *Evangelho do Dia* - ${data.data}
 🕊️ ${data.liturgia}
 
@@ -69,31 +66,34 @@ ${ev.titulo}
 "${ev.texto}"
 
 ❌ Digite *sair* para cancelar o envio diário do evangelho.
-      `.trim()
+    `.trim()
 
-      const subscribers = loadSubscribers()
+    const subscribers = loadSubscribers()
 
-for (const number of [...subscribers]) {
-  try {
-    const atualizados = loadSubscribers()
-    if (!atualizados.includes(number)) continue
-    await client.sendMessage(number, mensagem)
-    console.log(`✅ Enviado para: ${number}`)
-  } catch (e) {
-    console.error(`❌ Erro ao enviar para ${number}:`, e.message)
-  }
-}
-
-
-      console.log(`[${agora}] ✅ Mensagens enviadas.`)
-
-    } catch (err) {
-      console.error('❌ Erro ao buscar ou enviar:', err.message)
+    for (const number of [...subscribers]) {
+      try {
+        const atualizados = loadSubscribers()
+        if (!atualizados.includes(number)) continue
+        await client.sendMessage(number, mensagem)
+        console.log(`✅ Enviado para: ${number}`)
+      } catch (e) {
+        console.error(`❌ Erro ao enviar para ${number}:`, e.message)
+      }
     }
+
+    const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    console.log(`[${agora}] ✅ Mensagens enviadas.`)
+
+  } catch (err) {
+    console.error('❌ Erro ao buscar ou enviar:', err.message)
   }
 }
 
-setInterval(verificarHorario, 60 * 1000)
+cron.schedule('0 7 * * *', verificarHorario, {
+  timezone: 'America/Sao_Paulo'
+})
+
+
 
 client.on('message', async message => {
   const number = message.from
