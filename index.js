@@ -46,10 +46,16 @@ Digite uma das opções abaixo para interagir comigo:
 const menuBrasileirao = `⚽ Opções do Brasileirão:
 1 - Jogos de hoje
 2 - Próxima rodada
+3 - Tabela Atualizada
+
 Digite '0' para voltar ao menu principal.`
 
 client.on('qr', qr => qrcode.generate(qr, { small: true }))
-client.on('ready', () => console.log('Bot pronto!'))
+
+client.on('ready', () => {
+  console.log('Bot pronto!')
+  client.sendMessage('558681569018@c.us', 'Bot pronto!')
+})
 // Agendamento diário do evangelho
 const verificarHorario = async () => {
   try {
@@ -99,7 +105,10 @@ client.on('message', async message => {
   const number = message.from
   const text = message.body.trim().toLowerCase()
 
-  if (!userStates[number]) userStates[number] = { state: 'inicio' }
+  if (!userStates[number]) {
+    userStates[number] = { state: 'inicio' }
+    return message.reply(menuInicial.trim())
+  }
 
   const state = userStates[number]
 
@@ -157,8 +166,7 @@ client.on('message', async message => {
           const localDate = toZonedTime(utcDate, timezone)
           return (
             localDate >= startOfDay &&
-            localDate <= endOfDay &&
-            (m.status === 'SCHEDULED' || m.status === 'TIMED')
+            localDate <= endOfDay
           )
         })
 
@@ -170,11 +178,15 @@ client.on('message', async message => {
         let resposta = `📅 Jogos de hoje no Brasileirão: ${hojeStr}\n\n`
 
         for (const jogo of jogosHoje) {
-          const timeCasa = jogo.homeTeam.name
-          const timeFora = jogo.awayTeam.name
+          const timeCasa = jogo.homeTeam
+          const timeFora = jogo.awayTeam
           const localDate = toZonedTime(new Date(jogo.utcDate), timezone)
           const horario = format(localDate, 'HH:mm', { timeZone: timezone })
-          resposta += `• ${timeCasa} x ${timeFora} - ${horario}\n`
+          if (jogo.status === 'FINISHED') {
+            resposta += `• ${timeCasa.name}  ${jogo.score.fullTime.home} x ${jogo.score.fullTime.away} ${timeFora.name}\n`
+          } else {
+            resposta += `• ${timeCasa.name} x ${timeFora.name} - ${horario}\n`
+          }
         }
 
         resposta += `\n──────────────\n⬅️ Voltando ao menu:\n${menuInicial}`
@@ -192,30 +204,66 @@ client.on('message', async message => {
           headers: { 'X-Auth-Token': '18f9c31787b245c0b47573286ef9201d' }
         })
 
-        const { matches } = data
-        const jogoTimed = matches.find(m => m.status === 'TIMED')
-        const proximaRodada = matches.filter(m => m.matchday === jogoTimed.matchday)
+  const { matches } = data
+  const proxRodada = matches[0].season.currentMatchday + 1
+
+  const proximaRodada = matches.filter(m => m.matchday === proxRodada)
 
         if (proximaRodada.length === 0) {
           return message.reply(`⚽ Nenhum jogo encontrado para a próxima rodada.\n\n${menuInicial}`)
         }
 
-        let resposta = `📅 Próxima rodada do Brasileirão: Rodada ${jogoTimed.matchday}\n──────────────\n`
+        let resposta = `📅 Próxima rodada do Brasileirão: Rodada ${proxRodada}\n──────────────\n`
 
-        for (const jogo of proximaRodada) {
-          const timezone = 'America/Sao_Paulo'
-          const timeCasa = jogo.homeTeam.name
-          const timeFora = jogo.awayTeam.name
-          const localDate = toZonedTime(new Date(jogo.utcDate), timezone)
-          const horario = format(localDate, 'HH:mm', { timeZone: timezone })
-          const dataFormatada = format(localDate, 'dd/MM/yyyy', { timeZone: timezone })
-
-          resposta += `📅 ${dataFormatada} - ${horario}
+for (const jogo of proximaRodada) {
+    const timezone = 'America/Sao_Paulo'
+    const timeCasa = jogo.homeTeam.name
+    const timeFora = jogo.awayTeam.name
+    const localDate = toZonedTime(new Date(jogo.utcDate), timezone)
+    const horario = format(localDate, 'HH:mm', { timeZone: timezone })
+    const dataFormatada = format(localDate, 'dd/MM/yyyy', { timeZone: timezone })
+    if (jogo.status === 'FINISHED') {
+            resposta += `📅 ${dataFormatada} - Finalizado
+${timeCasa} ${jogo.score.fullTime.home} x ${jogo.score.fullTime.away} ${timeFora}
+──────────────
+`
+          } else {
+            resposta += `📅 ${dataFormatada} - ${horario}
 ${timeCasa} x ${timeFora}
 ──────────────
 `
-        }
+            }
+  }
 
+        resposta += `\n──────────────\n⬅️ Voltando ao menu:\n${menuInicial}`
+        return message.reply(resposta.trim())
+      } catch (error) {
+        console.error('Erro na API:', error.message)
+        return message.reply(`⚠️ Erro ao consultar a próxima rodada.\n\n${menuInicial}`)
+      }
+    }
+
+    if (text === '3') {
+      state.state = 'inicio'
+      try {
+        const { data } = await axios.get('https://api.football-data.org/v4/competitions/BSA/standings', {
+          headers: { 'X-Auth-Token': '18f9c31787b245c0b47573286ef9201d' }
+        })
+
+        const { standings } = data
+        let tabela = standings[0].table
+
+        let resposta = '```'
+         resposta += 'pos - Time          - pts - jgs\n'
+
+for (const time of tabela ) {
+ const posisao = String(time.position).padStart(3, ' ')
+  const nome = time.team.shortName.padEnd(13, ' ')
+  const pontos = String(time.points).padEnd(3, ' ')
+  const jogos = String(time.playedGames).padEnd(3, ' ')
+             resposta += `${posisao} - ${nome} - ${pontos} - ${jogos}\n`
+  }
+      resposta += '```'
         resposta += `\n──────────────\n⬅️ Voltando ao menu:\n${menuInicial}`
         return message.reply(resposta.trim())
       } catch (error) {
