@@ -6,17 +6,17 @@ const qrcode = require('qrcode-terminal')
 const axios = require('axios')
 const fs = require('fs')
 const path = require('path')
-
+const { Buttons } = require('whatsapp-web.js')
 const { tabela, proxrodada, jogoshoje } = require('./commands/brasileirao')
 const { evangelho } = require('./commands/religiao')
+const { cnpj } = require('./commands/cnpj')
 
 const subscribersFile = path.join(__dirname, 'evangelhoSubscribers.json')
 
 const eventosDir = path.join(__dirname, 'eventos')
 if (!fs.existsSync(eventosDir)) fs.mkdirSync(eventosDir)
 
-let eventoTemp = {}
-const estados = {} // <- variável global para estados de grupo
+const estados = {}
 
 function loadSubscribers() {
   if (!fs.existsSync(subscribersFile)) return []
@@ -53,13 +53,15 @@ const FinalPVD =
 Digite uma das opções abaixo para interagir comigo:
 1 - Brasileirão
 2 - Evangelho do dia
-3 - Criar QR code`
+3 - Criar QR code
+4 - Consultar CNPJ`
 
 const menuInicial = `Olá! Sou um bot nada haver criado pelo Micael Farias.
 Digite uma das opções abaixo para interagir comigo:
 1 - Brasileirão
 2 - Evangelho do dia
-3 - Criar QR code`
+3 - Criar QR code
+4 - Consultar CNPJ`
 
 const menuBrasileirao = `⚽ Opções do Brasileirão:
 1 - Jogos de hoje
@@ -74,8 +76,8 @@ client.on('ready', () => {
   console.log('Bot pronto!')
   client.sendMessage('558681569018@c.us', 'Bot pronto!')
 })
-// Agendamento diário do evangelho
-const verificarHorario = async () => {
+
+const evangelhoDiario = async () => {
   try {
     const { data } = await axios.get('https://liturgia.up.railway.app/v2/')
     const ev = data.leituras.evangelho[0]
@@ -113,7 +115,7 @@ ${ev.titulo}
   }
 }
 
-cron.schedule('0 7 * * *', verificarHorario, {
+cron.schedule('0 7 * * *', evangelhoDiario, {
   timezone: 'America/Sao_Paulo'
 })
 
@@ -129,8 +131,15 @@ client.on('message', async message => {
     const userId = message.from
     const grupoDir = path.join(eventosDir, message.from)
     if (!fs.existsSync(grupoDir)) fs.mkdirSync(grupoDir, { recursive: true })
+
     if (text.startsWith('!jogoshoje')) {
       const resp = await jogoshoje()
+      return message.reply(resp.trim())
+    }
+
+    if (text.startsWith('!cnpj')) {
+      const numero_cnpj = text.split('!cnpj ')[1]
+      const resp = await cnpj(numero_cnpj)
       return message.reply(resp.trim())
     }
 
@@ -275,12 +284,12 @@ ${lista}
   }
 
   if (message.from.endsWith('@c.us')) {
-  const state = userStates[number]
+    const state = userStates[number]
 
-  if (!userStates[number]) {
-    userStates[number] = { state: 'inicio' }
-    return message.reply(menuInicial.trim())
-  }
+    if (!userStates[number]) {
+      userStates[number] = { state: 'inicio' }
+      return message.reply(menuInicial.trim())
+    }
     if (text === 'sair' || text === 'parar' || text === 'cancelar') {
       const subs = loadSubscribers()
       const index = subs.indexOf(number)
@@ -302,6 +311,8 @@ ${lista}
         state.state = 'evangelho'
       } else if (text === '3' || text.includes('qr')) {
         state.state = 'qrcode'
+      } else if (text === '4' || text.includes('cnpj')) {
+        state.state = 'cnpj'
       } else {
         return message.reply(menuInicial.trim())
       }
@@ -359,6 +370,23 @@ ${lista}
 
       state.next = 'gerarqrcode'
       return message.reply(menuQrcode)
+    }
+
+    if (state.state === 'cnpj') {
+      let textCnpj = 'Envie o cnpj que deseja consultar, apenas número (ex.12123123000112).'
+
+      if (state.next === 'cnpj_consulta') {
+        state.state = 'inicio'
+        state.next = null
+
+        const numero_cnpj = text
+        const resp = await cnpj(numero_cnpj)
+        return message.reply(resp.trim())
+      }
+
+
+      state.next = 'cnpj_consulta'
+      return message.reply(textCnpj)
     }
 
     if (state.state === 'evangelho_subscribe') {
