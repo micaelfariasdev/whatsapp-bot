@@ -96,16 +96,16 @@ ${ev.titulo}
 
     const subscribers = loadSubscribers()
 
-    for (const number of [...subscribers]) {
+
+    for (const number of subscribers) {
       try {
-        const atualizados = loadSubscribers()
-        if (!atualizados.includes(number)) continue
         await client.sendMessage(number, mensagem)
         console.log(`✅ Enviado para: ${number}`)
       } catch (e) {
         console.error(`❌ Erro ao enviar para ${number}:`, e.message)
       }
     }
+
 
     const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     console.log(`[${agora}] ✅ Mensagens enviadas.`)
@@ -125,9 +125,21 @@ client.on('message', async message => {
   const text = message.body.trim().toLowerCase()
   const number = message.from
 
+  let Desligar = fs.existsSync('OFF')
+
+  if (text === '!desligar' && message.from === '558681569018@c.us') {
+    Desligar = !Desligar
+    if (Desligar) {
+      fs.writeFileSync('OFF', 'true')
+      return message.reply('🔴 Bot desligado.')
+    } else {
+      fs.unlinkSync('OFF')
+      return message.reply('🟢 Bot ligado.')
+    }
+  }
 
 
-  if (message.from.endsWith('@g.us')) {
+  if (message.from.endsWith('@g.us') && !Desligar) {
     const userId = message.from
     const grupoDir = path.join(eventosDir, message.from)
     if (!fs.existsSync(grupoDir)) fs.mkdirSync(grupoDir, { recursive: true })
@@ -139,6 +151,7 @@ client.on('message', async message => {
 
     if (text.startsWith('!cnpj')) {
       const numero_cnpj = text.split('!cnpj ')[1]
+      if (!numero_cnpj) return message.reply('❗ Informe o CNPJ após o comando.')
       const resp = await cnpj(numero_cnpj)
       return message.reply(resp.trim())
     }
@@ -283,7 +296,7 @@ ${lista}
     return
   }
 
-  if (message.from.endsWith('@c.us')) {
+  if (message.from.endsWith('@c.us') && !Desligar) {
     const state = userStates[number]
 
     if (!userStates[number]) {
