@@ -26,12 +26,11 @@ class Rifa(db.Model):
 
 class Numero(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    numero = db.Column(db.Integer, nullable=False,
-                       unique=True)  # Tipo de dado correto
-    status = db.Column(db.String(20), default='available')
-    nome_comprador = db.Column(db.String(100), nullable=True)
-    whatsapp_comprador = db.Column(db.String(20), nullable=True)
-    data_reserva = db.Column(db.DateTime, nullable=True)
+    numero = db.Column(db.Integer, unique=True, nullable=False)
+    status = db.Column(db.String(20), default='available', nullable=False)
+    nome_comprador = db.Column(db.String(100))
+    whatsapp_comprador = db.Column(db.String(20))
+    data_reserva = db.Column(db.DateTime)
 
 
 # Cria as tabelas do banco de dados se elas não existirem

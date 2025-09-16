@@ -1,0 +1,16 @@
+blinker
+certifi
+charset-normalizer
+click
+Flask
+Flask-SQLAlchemy
+greenlet
+idna
+itsdangerous
+Jinja2
+MarkupSafe
+requests
+SQLAlchemy
+typing_extensions
+urllib
+Werkzeug
