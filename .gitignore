@@ -8,3 +8,6 @@ wwebjs_auth - bck
 wwebjs_cache - bck
 evangelhoSubscribers.json
 eventos
+
+venv
+venv/*

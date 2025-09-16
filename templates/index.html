@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landing Page de Rifa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .number-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .number-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div id="purchase-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-auto relative">
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Compre seus números!</h2>
+            <p class="text-sm text-gray-500 mb-6">Preencha seus dados para reservar e receber as instruções de pagamento.</p>
+            <div id="selected-numbers-display" class="bg-gray-100 p-3 rounded-lg mb-4 text-center text-lg font-semibold text-gray-700"></div>
+            <form id="purchase-form" class="space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700">Seu Nome</label>
+                    <input type="text" id="name" name="name" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 sm:text-sm" placeholder="Seu nome completo">
+                </div>
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700">Número de WhatsApp</label>
+                    <input type="text" id="phone" name="phone" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 sm:text-sm" placeholder="(99) 99999-9999">
+                </div>
+                <div class="text-sm text-gray-500">
+                    Ao confirmar, o número selecionado ficará reservado por 30 minutos.
+                </div>
+                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors">
+                    Reservar Meu Número
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-5xl w-full">
+        <header class="bg-sky-600 text-white p-8 text-center rounded-t-3xl">
+            <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight">Concorra a um <span class="text-sky-200">{{ rifa.premio }}</span>!</h1>
+            <p class="mt-2 text-lg sm:text-xl font-light">Garanta sua sorte na nossa rifa de {{ rifa.total_pontos }} números!</p>
+        </header>
+
+        <main class="p-8">
+            <div class="grid md:grid-cols-2 gap-8 items-center mb-8">
+                <div>
+                    <img src="https://placehold.co/800x600/60a5fa/ffffff?text=Espaço+para+a+Imagem+do+Prêmio" alt="Imagem do prêmio da rifa" class="rounded-2xl shadow-lg w-full">
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-2 text-xl font-semibold text-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Sorteio: <span id="draw-date" class="font-bold">{{ rifa.data_sorteio }}</span></span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xl font-semibold text-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span>Valor: <span class="font-bold text-sky-600">R$ {{ '{:.2f}'.format(rifa.valor_ponto) }}</span> por bilhete</span>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded-xl shadow-inner border border-gray-200 text-gray-600">
+                        <p class="font-semibold mb-2">Regras do Sorteio:</p>
+                        <p class="text-sm">O ganhador será o número que coincidir com os dois últimos dígitos do 1º prêmio da Loteria Federal, no dia do sorteio.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center space-x-4 mb-8 text-sm font-semibold">
+                <div class="flex items-center space-x-1">
+                    <span class="w-4 h-4 rounded-full bg-green-500"></span>
+                    <span>Disponível</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <span class="w-4 h-4 rounded-full bg-yellow-400"></span>
+                    <span>Reservado</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <span class="w-4 h-4 rounded-full bg-red-500"></span>
+                    <span>Vendido</span>
+                </div>
+            </div>
+
+            <div id="numbers-grid" class="grid grid-cols-5 sm:grid-cols-10 gap-3">
+                {% for numero in numeros %}
+                    <div class="number-card text-center p-3 rounded-lg text-white font-bold text-lg shadow-sm
+                        {% if numero.status == 'available' %}
+                            bg-green-500 hover:bg-green-600 cursor-pointer
+                        {% elif numero.status == 'reserved' %}
+                            bg-yellow-400 cursor-not-allowed
+                        {% else %}
+                            bg-red-500 cursor-not-allowed
+                        {% endif %}
+                    " data-number="{{ numero.numero }}">
+                        {{ numero.numero }}
+                    </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const numbersGrid = document.getElementById('numbers-grid');
+            const purchaseModal = document.getElementById('purchase-modal');
+            const closeModalBtn = document.getElementById('close-modal');
+            const purchaseForm = document.getElementById('purchase-form');
+            const selectedNumbersDisplay = document.getElementById('selected-numbers-display');
+            
+            let selectedNumber = null;
+
+            // Manipula o clique nos números
+            numbersGrid.addEventListener('click', (event) => {
+                const numberCard = event.target.closest('.number-card');
+                if (numberCard && numberCard.classList.contains('cursor-pointer')) {
+                    selectedNumber = numberCard.dataset.number;
+                    selectedNumbersDisplay.textContent = `Número Selecionado: ${selectedNumber}`;
+                    purchaseModal.classList.remove('hidden');
+                    purchaseModal.classList.add('flex');
+                }
+            });
+
+            // Fecha o modal
+            closeModalBtn.addEventListener('click', () => {
+                purchaseModal.classList.add('hidden');
+                purchaseModal.classList.remove('flex');
+                selectedNumber = null;
+            });
+
+            // Lida com o envio do formulário
+            purchaseForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const name = document.getElementById('name').value;
+                const phone = document.getElementById('phone').value;
+
+                if (!name || !phone) {
+                    alert('Por favor, preencha todos os campos.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/reservar', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            numero: selectedNumber,
+                            nome: name,
+                            whatsapp: phone
+                        }),
+                    });
+
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        alert(result.mensagem);
+                        purchaseModal.classList.add('hidden');
+                        purchaseModal.classList.remove('flex');
+                        selectedNumber = null;
+                        
+                        // Atualiza o card na página após a reserva
+                        const numberElement = document.querySelector(`[data-number="${result.numero}"]`);
+                        if(numberElement){
+                           numberElement.classList.remove('bg-green-500', 'hover:bg-green-600', 'cursor-pointer');
+                           numberElement.classList.add('bg-yellow-400', 'cursor-not-allowed');
+                        }
+                    } else {
+                        alert(`Erro: ${result.error}`);
+                    }
+                } catch (error) {
+                    alert('Ocorreu um erro ao tentar reservar o número.');
+                    console.error('Erro:', error);
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

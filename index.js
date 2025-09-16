@@ -1,32 +1,15 @@
-const { Client, LocalAuth } = require('whatsapp-web.js')
-const cron = require('node-cron')
-const { MessageMedia } = require('whatsapp-web.js')
-const QRCode = require('qrcode')
-const qrcode = require('qrcode-terminal')
-const axios = require('axios')
-const fs = require('fs')
-const path = require('path')
-const { Buttons } = require('whatsapp-web.js')
-const { tabela, proxrodada, jogoshoje } = require('./commands/brasileirao')
-const { evangelho } = require('./commands/religiao')
-const { cnpj } = require('./commands/cnpj')
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const qrcode = require('qrcode-terminal');
+const express = require('express');
+const fetch = require('node-fetch'); // Importa o node-fetch
 
-const subscribersFile = path.join(__dirname, 'evangelhoSubscribers.json')
+const app = express();
+const port = 3000;
 
-const eventosDir = path.join(__dirname, 'eventos')
-if (!fs.existsSync(eventosDir)) fs.mkdirSync(eventosDir)
+// Middleware para processar requisições JSON
+app.use(express.json());
 
-const estados = {}
-
-function loadSubscribers() {
-  if (!fs.existsSync(subscribersFile)) return []
-  return JSON.parse(fs.readFileSync(subscribersFile))
-}
-
-function saveSubscribers(subs) {
-  fs.writeFileSync(subscribersFile, JSON.stringify(subs, null, 2))
-}
-
+// Inicialização do cliente do WhatsApp
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
@@ -40,383 +23,241 @@ const client = new Client({
       '--no-zygote',
       '--disable-gpu'
     ]
+  },
+  webVersionCache: {
+    type: 'remote',
+    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html'
   }
-})
+});
 
 
-
-const userStates = {}
-
-const FinalPVD =
-  `\n──────────────\n⬅️ Voltando ao menu:
-
-Digite uma das opções abaixo para interagir comigo:
-1 - Brasileirão
-2 - Evangelho do dia
-3 - Criar QR code
-4 - Consultar CNPJ`
-
-const menuInicial = `Olá! Sou um bot nada haver criado pelo Micael Farias.
-Digite uma das opções abaixo para interagir comigo:
-1 - Brasileirão
-2 - Evangelho do dia
-3 - Criar QR code
-4 - Consultar CNPJ`
-
-const menuBrasileirao = `⚽ Opções do Brasileirão:
-1 - Jogos de hoje
-2 - Próxima rodada
-3 - Tabela Atualizada
-
-Digite '0' para voltar ao menu principal.`
-
-client.on('qr', qr => qrcode.generate(qr, { small: true }))
+client.on('qr', qr => qrcode.generate(qr, { small: true }));
 
 client.on('ready', () => {
-  console.log('Bot pronto!')
-  client.sendMessage('558681569018@c.us', 'Bot pronto!')
-})
-
-const evangelhoDiario = async () => {
-  try {
-    const { data } = await axios.get('https://liturgia.up.railway.app/v2/')
-    const ev = data.leituras.evangelho[0]
-
-    const mensagem = `
-📖 *Evangelho do Dia* - ${data.data}
-🕊️ ${data.liturgia}
-
-📍 ${ev.referencia}
-${ev.titulo}
-
-"${ev.texto}"
-
-❌ Digite *sair* para cancelar o envio diário do evangelho.
-    `.trim()
-
-    const subscribers = loadSubscribers()
-
-
-    for (const number of subscribers) {
-      try {
-        await client.sendMessage(number, mensagem)
-        console.log(`✅ Enviado para: ${number}`)
-      } catch (e) {
-        console.error(`❌ Erro ao enviar para ${number}:`, e.message)
-      }
-    }
-
-
-    const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-    console.log(`[${agora}] ✅ Mensagens enviadas.`)
-
-  } catch (err) {
-    console.error('❌ Erro ao buscar ou enviar:', err.message)
-  }
-}
-
-cron.schedule('0 7 * * *', evangelhoDiario, {
-  timezone: 'America/Sao_Paulo'
-})
-
-
+  console.log('Bot pronto!');
+  // Inicia o servidor Express somente depois que o bot estiver pronto
+  app.listen(port, () => {
+    console.log(`Servidor Express rodando em http://localhost:${port}`);
+  });
+  client.sendMessage('558681569018@c.us', 'Bot pronto!');
+});
 
 client.on('message', async message => {
-  const text = message.body.trim().toLowerCase()
-  const number = message.from
+  const text = message.body.trim().toLowerCase();
 
-  let Desligar = fs.existsSync('OFF')
+  if (message.from.endsWith('120363420117493479@g.us')) {
 
-  if (text === '!desligar' && message.from === '558681569018@c.us') {
-    Desligar = !Desligar
-    if (Desligar) {
-      fs.writeFileSync('OFF', 'true')
-      return message.reply('🔴 Bot desligado.')
-    } else {
-      fs.unlinkSync('OFF')
-      return message.reply('🟢 Bot ligado.')
-    }
   }
-
-
-  if (message.from.endsWith('@g.us') && !Desligar) {
-    const userId = message.from
-    const grupoDir = path.join(eventosDir, message.from)
-    if (!fs.existsSync(grupoDir)) fs.mkdirSync(grupoDir, { recursive: true })
-
-    if (text.startsWith('!jogoshoje')) {
-      const resp = await jogoshoje()
-      return message.reply(resp.trim())
+  // Verifica se a mensagem veio de um grupo
+  if (message.from.endsWith('@g.us')) {
+    // Comando !oi
+    if (text.startsWith('!oi')) {
+      return message.reply('oi');
     }
 
-    if (text.startsWith('!cnpj')) {
-      const numero_cnpj = text.split('!cnpj ')[1]
-      if (!numero_cnpj) return message.reply('❗ Informe o CNPJ após o comando.')
-      const resp = await cnpj(numero_cnpj)
-      return message.reply(resp.trim())
-    }
+    if (text.startsWith('!atualizar_rifa')) {
+      console.log('enviando')
+      const args = message.body.trim().split('\n');
 
-    if (text.startsWith('!tabela')) {
-      const resp = await tabela()
-      return message.reply(resp.trim())
-    }
-
-    if (text.startsWith('!rodada')) {
-      const resp = await proxrodada()
-      return message.reply(resp.trim())
-    }
-
-    if (text.startsWith('!evangelho')) {
-      const resp = await evangelho()
-      return message.reply(resp.trim())
-    }
-
-    if (!estados[userId]) estados[userId] = { state: 'inicio' }
-    const state = estados[userId]
-
-    if (text === '/eventos') {
-      const grupoDir = path.join(eventosDir, message.from)
-
-      if (!fs.existsSync(grupoDir)) return message.reply('📭 Nenhum evento criado.')
-
-      const files = fs.readdirSync(grupoDir).filter(f => f.endsWith('.json'))
-
-      if (files.length === 0) return message.reply('📭 Nenhum evento criado.')
-
-      let resposta = '📅 *Lista de Eventos:*\n\n'
-
-      for (const file of files) {
-        const evento = JSON.parse(fs.readFileSync(path.join(grupoDir, file)))
-        resposta += `📌 *${evento.nome}*\n🗓️ ${evento.data} - ${evento.hora}\n📍 ${evento.local}\n👥 ${evento.confirmados?.length || 0} confirmado(s)\n──────────────\n`
+      // Verifica se o número de argumentos está correto
+      if (args.length !== 5) {
+        return message.reply(`Uso incorreto do comando.\nFormato:
+!atualizar_rifa
+<Prêmio>
+<Valor do Ponto>
+<Total de Pontos>
+<Data do Sorteio>`);
       }
 
-      return message.reply(resposta.trim())
-    }
+      const premio = args[1].trim().split(':')[1];
+      const valorPonto = parseFloat(args[2].trim().split(':')[1]);
+      const totalPontos = parseInt(args[3].trim().split(':')[1]);
+      const dataSorteio = args[4].trim().split(':')[1];
 
-    if (text === '/sair' && ['evento_data', 'evento_hora', 'evento_local'].includes(state.state)) {
-      estados[userId] = { state: 'inicio' }
-      return message.reply('❌ Criação de evento cancelada.')
-    }
-
-    if (text.startsWith('/novoe ')) {
-      state.evento = {
-        nome: text.split('/novoe ')[1],
-        data: '',
-        hora: '',
-        local: '',
-        confirmados: [],
-        criador: message.author || message.id.participant
-      }
-      state.state = 'evento_data'
-      return message.reply('🗓️ Qual a *data* do evento? (ex: 25/12/2025)')
-    }
-
-    if (['evento_data', 'evento_hora', 'evento_local'].includes(state.state)) {
-      const autor = message.author || message.id.participant
-      if (state.evento.criador !== autor) return
-
-      if (state.state === 'evento_data') {
-        state.evento.data = text
-        state.state = 'evento_hora'
-        return message.reply('⏰ Qual a *hora* do evento? (ex: 19:00)')
+      if (isNaN(valorPonto) || isNaN(totalPontos)) {
+        return message.reply('Valor do ponto e total de pontos devem ser números.');
       }
 
-      if (state.state === 'evento_hora') {
-        state.evento.hora = text
-        state.state = 'evento_local'
-        return message.reply('📍 Qual o *local* do evento?')
-      }
+      try {
+        const response = await fetch('http://127.0.0.1:5000/api/rifa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            premio: premio,
+            valor_ponto: valorPonto,
+            total_pontos: totalPontos,
+            data_sorteio: dataSorteio
+          })
+        });
 
-      if (state.state === 'evento_local') {
-        state.evento.local = text
-        const filePath = path.join(grupoDir, `${state.evento.nome}.json`)
-        fs.writeFileSync(filePath, JSON.stringify(state.evento, null, 2))
-
-
-        const e = state.evento
-        estados[userId] = { state: 'inicio' }
-
-        return message.reply(
-          `✅ Evento *${e.nome}* criado com sucesso!\n\n🗓️ ${e.data} - ${e.hora}\n📍 ${e.local}`
-        )
-      }
-    }
-    if (text.startsWith('/del ')) {
-      const nome = text.split('/del ')[1].trim()
-      const filePath = path.join(grupoDir, `${nome}.json`)
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath)
-        return message.reply(`🗑️ Evento *${nome}* foi removido com sucesso.`)
-      } else {
-        return message.reply('❌ Evento não encontrado.')
-      }
-    }
-
-
-
-    if (text.startsWith('/evento ') && state.state === 'inicio') {
-      const nome = text.replace('/evento', '').trim().toLowerCase().replace(/\s+/g, '_')
-      const filepath = path.join(grupoDir, `${nome}.json`)
-
-      if (!fs.existsSync(filepath)) return message.reply('❌ Evento não encontrado.')
-
-      const evento = JSON.parse(fs.readFileSync(filepath))
-      const lista = evento.confirmados.map((n, i) => `${i + 1} - ${n}`).join('\n') || 'Nenhum confirmado ainda.'
-
-      return message.reply(
-        `📌 *${evento.nome}*
-🗓️ ${evento.data} - ${evento.hora}
-📍 ${evento.local}
-
-👥 Confirmados:
-${lista}
-
-👉 Para confirmar presença, envie:
-/vou ${evento.nome}`)
-    }
-
-    if (text.startsWith('/vou')) {
-      const nomeEvento = text.replace('/vou', '').trim().toLowerCase().replace(/\s+/g, '_')
-      const filepath = path.join(grupoDir, `${nomeEvento}.json`)
-      if (!fs.existsSync(filepath)) return message.reply('❌ Evento não encontrado.')
-
-      const evento = JSON.parse(fs.readFileSync(filepath))
-      const nomeContato = message._data.notifyName || 'Participante'
-
-      if (!evento.confirmados.includes(nomeContato)) evento.confirmados.push(nomeContato)
-      fs.writeFileSync(filepath, JSON.stringify(evento, null, 2))
-
-      const lista = evento.confirmados.map((n, i) => `${i + 1} - ${n}`).join('\n')
-      return message.reply(
-        `📌 *${evento.nome}*\n🗓️ ${evento.data} - ${evento.hora}\n📍 ${evento.local}\n\n👥 Confirmados:\n${lista}`
-      )
-    }
-
-    return
-  }
-
-  if (message.from.endsWith('@c.us') && !Desligar) {
-    const state = userStates[number]
-
-    if (!userStates[number]) {
-      userStates[number] = { state: 'inicio' }
-      return message.reply(menuInicial.trim())
-    }
-    if (text === 'sair' || text === 'parar' || text === 'cancelar') {
-      const subs = loadSubscribers()
-      const index = subs.indexOf(number)
-      if (index !== -1) {
-        subs.splice(index, 1)
-        saveSubscribers(subs)
-        return message.reply('🛑 Você foi removido da lista de envio diário do evangelho.')
-      } else {
-        return message.reply('Você não está cadastrado para receber o evangelho diário.')
-      }
-    }
-
-    // Menu inicial
-    if (state.state === 'inicio') {
-      if (text === '1' || text.includes('jogos')) {
-        state.state = 'brasileirao'
-        return message.reply(menuBrasileirao)
-      } else if (text === '2' || text.includes('evangelho')) {
-        state.state = 'evangelho'
-      } else if (text === '3' || text.includes('qr')) {
-        state.state = 'qrcode'
-      } else if (text === '4' || text.includes('cnpj')) {
-        state.state = 'cnpj'
-      } else {
-        return message.reply(menuInicial.trim())
-      }
-    }
-
-    // Submenu Brasileirão
-    if (state.state === 'brasileirao') {
-      if (text === '0' || text.includes('voltar') || text.includes('menu')) {
-        state.state = 'inicio'
-        return message.reply(menuInicial)
-      }
-
-      if (text === '1') {
-        state.state = 'inicio'
-        const resp = await jogoshoje()
-        return message.reply(resp.trim() + FinalPVD)
-      }
-
-      if (text === '2') {
-        state.state = 'inicio'
-        const resp = await proxrodada()
-        return message.reply(resp.trim() + FinalPVD)
-      }
-
-      if (text === '3') {
-        state.state = 'inicio'
-        const resp = await tabela()
-        return message.reply(resp.trim() + FinalPVD)
-      }
-    }
-
-    if (state.state === 'evangelho') {
-      state.state = 'evangelho_subscribe'
-      let resp = await evangelho()
-      resp += `\n\nVocê gostaria de receber o evangelho do dia diariamente? Responda com "sim" ou "não".`
-      return message.reply(resp.trim() + FinalPVD)
-    }
-
-    if (state.state === 'qrcode') {
-      let menuQrcode = 'Envie o código que deseja transformar em QR Code.'
-
-      if (state.next === 'gerarqrcode') {
-        state.state = 'inicio'
-        state.next = null
-
-        try {
-          const qrBuffer = await QRCode.toBuffer(text)
-          const qrBase64 = qrBuffer.toString('base64')
-          const media = new MessageMedia('image/png', qrBase64, 'qrcode.png')
-          return client.sendMessage(message.from, media)
-        } catch (error) {
-          return message.reply('❌ Erro ao gerar QR Code.')
+        if (response.ok) {
+          const result = await response.json();
+          return message.reply(`✅ ${result.mensagem}`);
+        } else {
+          const error = await response.json();
+          return message.reply(`❌ Erro ao atualizar a rifa: ${error.error || response.statusText}`);
         }
+      } catch (error) {
+        console.error('Erro ao conectar com o servidor Flask:', error);
+        return message.reply('❌ Ocorreu um erro ao tentar atualizar a rifa. Verifique se o servidor Flask está rodando.');
       }
-
-      state.next = 'gerarqrcode'
-      return message.reply(menuQrcode)
     }
 
-    if (state.state === 'cnpj') {
-      let textCnpj = 'Envie o cnpj que deseja consultar, apenas número (ex.12123123000112).'
+    if (text.startsWith('!confirme')) {
+      const text2 = String(text)
+      const tes = text2.replace(' ', '/');
+      const partes = tes.split('/');
+      const numeroParaConfirmar = partes[1];
 
-      if (state.next === 'cnpj_consulta') {
-        state.state = 'inicio'
-        state.next = null
-
-        const numero_cnpj = text
-        const resp = await cnpj(numero_cnpj)
-        return message.reply(resp.trim())
+      if (!numeroParaConfirmar) {
+        message.reply('Por favor, forneça um número para confirmar. Ex: !confirme/12');
+        return;
       }
 
+      // URL da sua API Flask
+      const flaskApiUrl = 'http://127.0.0.1:5000/api/confirmado';
 
-      state.next = 'cnpj_consulta'
-      return message.reply(textCnpj)
-    }
+      try {
+        // Monta o payload (os dados a serem enviados no POST)
+        const payload = {
+          id: parseInt(numeroParaConfirmar)
+        };
 
-    if (state.state === 'evangelho_subscribe') {
-      if (text === 'sim') {
-        const subs = loadSubscribers()
-        if (!subs.includes(number)) {
-          subs.push(number)
-          saveSubscribers(subs)
+        // Faz a requisição POST para a sua API Flask
+        const response = await fetch(flaskApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        // Verifica se a resposta foi bem-sucedida antes de tentar converter para JSON
+        if (response.ok) {
+          const result = await response.json();
+          message.reply(`✅ ${result.mensagem}`);
+        } else {
+          const error = await response.json();
+          message.reply(`❌ Erro ao confirmar o número: ${error.error || response.statusText}`);
         }
-        state.state = 'inicio'
-        return message.reply(`✅ Você foi cadastrado para receber o evangelho diariamente.\n\n${menuInicial.trim()}`)
+
+      } catch (error) {
+        // Se a requisição falhar, pega a mensagem de erro
+        const erroApi = 'Erro ao conectar com a API da rifa.';
+        console.error('Erro na requisição para o Flask:', error);
+        message.reply(`❌ Ocorreu um erro ao tentar confirmar o número. Verifique se o servidor Flask está rodando.`);
+      }
+    }
+
+    if (text.startsWith('!numeros')) {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/api/numeros', {
+          method: 'GET',
+        });
+
+        if (response.ok) {
+          const numeros = await response.json();
+          const sold = numeros
+            .filter(item => item.status === 'sold')
+            .map(i => i.numero)
+          const available = numeros
+            .filter(i => i.status === 'available')
+            .map(i => i.numero)
+          const reserved = numeros
+            .filter(i => i.status === 'reserved')
+            .map(i => i.numero)
+          message.reply(`Numeros vendidos são: ${sold.join(', ')}\nNumeros reservados são: ${reserved.join(', ')}\nNumeros disponiveis são: ${available.join(', ')}`);
+        } else {
+          console.error('Erro na requisição:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('Ocorreu um erro:', error);
+      }
+    }
+
+    if (text.startsWith('!reservados')) {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/api/numeros', {
+          method: 'GET',
+        });
+
+        if (response.ok) {
+          const numeros = await response.json();
+          const reservedList = numeros
+            .filter(item => item.status === 'reserved')
+          var msg = '🟠 Números reservados 🟠\n'
+          for (var n of reservedList) {
+            msg +='---------------------------\n'
+            msg += `Nome: ${n.nome}\nZap: ${n.whatsapp}\nNúmero do ponto:  ${n.numero}\n`
+          }
+          message.reply(msg);
+        } else {
+          console.error('Erro na requisição:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('Ocorreu um erro:', error);
+      }
+    }
+
+
+    // Comando !info
+    if (text.startsWith('!info')) {
+      const chat = await message.getChat();
+
+      // Certifica-se de que é um grupo
+      if (chat.isGroup) {
+        const participantes = chat.participants.length;
+        const nomeDoGrupo = chat.name;
+        const criacao = new Date(chat.createdAt).toLocaleDateString("pt-BR");
+        const descricao = chat.description || 'Nenhuma descrição.';
+
+        // Monta a mensagem de resposta
+        const info = `
+*--- Informações do Grupo ---*
+*Nome:* ${nomeDoGrupo}
+*ID do Grupo:* ${chat.id._serialized}
+*Total de Membros:* ${participantes}
+*Data de Criação:* ${criacao}
+*Descrição:* ${descricao}
+`;
+        return message.reply(info.trim());
       } else {
-        state.state = 'inicio'
-        return message.reply(`${menuInicial.trim()}`)
+        return message.reply('Este comando só pode ser usado em grupos.');
       }
     }
   }
-})
+});
 
-client.initialize()
+// A rota Express precisa ser definida antes da inicialização
+app.post('/enviar-mensagem', (req, res) => {
+  const { numero, mensagem } = req.body;
+  if (!numero || !mensagem) {
+    return res.status(400).json({ error: 'Número e mensagem são obrigatórios.' });
+  }
+  client.sendMessage(`${numero}@c.us`, mensagem)
+    .then(response => {
+      console.log('Mensagem enviada com sucesso:', response.id._serialized);
+      res.status(200).json({ success: true, message: 'Mensagem enviada com sucesso!' });
+    })
+    .catch(err => {
+      console.error('Erro ao enviar mensagem:', err);
+      res.status(500).json({ error: 'Falha ao enviar a mensagem.', details: err });
+    });
+});
+
+app.post('/reserva', (req, res) => {
+  const { mensagem } = req.body;
+  if (!mensagem) {
+    return res.status(400).json({ error: 'Número e mensagem são obrigatórios.' });
+  }
+  client.sendMessage(`120363420117493479@g.us`, mensagem)
+    .then(response => {
+      console.log('Mensagem enviada com sucesso:', response.id._serialized);
+      res.status(200).json({ success: true, message: 'Mensagem enviada com sucesso!' });
+    })
+    .catch(err => {
+      console.error('Erro ao enviar mensagem:', err);
+      res.status(500).json({ error: 'Falha ao enviar a mensagem.', details: err });
+    });
+});
+
+// Inicialização do cliente
+client.initialize();
