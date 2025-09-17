@@ -1,190 +1,444 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Landing Page de Rifa</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rifa de Formatura - Isaac Mousaniel</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .number-card { transition: transform 0.2s, box-shadow 0.2s; }
-        .number-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f3f4f6;
+      }
+
+      .number-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .number-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
     </style>
-</head>
+  </head>
 
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <body
+    id="body"
+    class="bg-gray-100 min-h-screen flex items-center justify-center p-4"
+  >
+    <div
+      id="purchase-modal"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-[9999]"
+    >
+      <div
+        class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-auto relative"
+      >
+        <button
+          id="close-modal"
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">
+          Compre seus números!
+        </h2>
+        <p class="text-sm text-gray-500 mb-6">
+          Preencha seus dados para reservar e receber as instruções de
+          pagamento.
+        </p>
+        <div
+          id="selected-numbers-display"
+          class="bg-gray-100 p-3 rounded-lg mb-4 text-center text-lg font-semibold text-gray-700"
+        ></div>
 
-    <div id="purchase-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-auto relative">
-            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+        <form id="purchase-form" class="space-y-4">
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700"
+              >Seu Nome</label
+            >
+            <input
+              type="text"
+              id="name"
+              name="name"
+              required
+              class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+              placeholder="Seu nome completo"
+            />
+          </div>
+          <div>
+            <label for="phone" class="block text-sm font-medium text-gray-700"
+              >Número de WhatsApp</label
+            >
+            <input
+              type="text"
+              id="phone"
+              name="phone"
+              required
+              class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+              placeholder="(99) 99999-9999"
+            />
+          </div>
+          <div class="text-sm text-gray-500">
+            Ao confirmar, o número selecionado ficará reservado por 30 minutos.
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors"
+          >
+            Reservar Meu Número
+          </button>
+        </form>
+
+        <div
+          id="payment-info"
+          class="hidden text-center mt-6"
+        >
+          <h3 class="text-xl font-bold text-gray-800 mb-4">
+            🎉 Número Reservado! 🎉
+          </h3>
+          <p class="text-sm text-gray-600 mb-4">
+            Para garantir sua compra, faça o pagamento via PIX e envie o
+            comprovante para o número abaixo.
+          </p>
+          <img
+            src="{{ url_for('static', filename='pix.png') }}"
+            alt="QR Code para PIX"
+            class="mx-auto w-48 h-48 mb-4 border-2 border-sky-300 rounded-xl"
+          />
+          <p class="font-bold text-lg text-sky-600 mb-2">
+            Ou copie o código para pagar
+          </p>
+
+          <div
+            class="flex items-center justify-center space-x-2 bg-gray-200 p-2 rounded-lg mb-4 shadow-inner"
+          >
+            <p
+              id="pix-code"
+              class="text-xs font-mono text-gray-700 break-all text-left w-2/3"
+            >
+              00020126580014BR.GOV.BCB.PIX01364ac4b7a5-76c4-4b86-8b27-fc5f85165e8752040000530398654045.005802BR5925Isaac Mousaniel Freitas V6009SAO PAULO62140510vHpvVka1du63044DC7
+            </p>
+            <button
+              id="copy-button"
+              class="bg-gray-300 hover:bg-gray-400 p-2 rounded-lg transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-gray-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h6a2 2 0 002-2v-6a2 2 0 00-2-2h-6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                />
+              </svg>
             </button>
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">Compre seus números!</h2>
-            <p class="text-sm text-gray-500 mb-6">Preencha seus dados para reservar e receber as instruções de pagamento.</p>
-            <div id="selected-numbers-display" class="bg-gray-100 p-3 rounded-lg mb-4 text-center text-lg font-semibold text-gray-700"></div>
-            <form id="purchase-form" class="space-y-4">
-                <div>
-                    <label for="name" class="block text-sm font-medium text-gray-700">Seu Nome</label>
-                    <input type="text" id="name" name="name" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 sm:text-sm" placeholder="Seu nome completo">
-                </div>
-                <div>
-                    <label for="phone" class="block text-sm font-medium text-gray-700">Número de WhatsApp</label>
-                    <input type="text" id="phone" name="phone" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 sm:text-sm" placeholder="(99) 99999-9999">
-                </div>
-                <div class="text-sm text-gray-500">
-                    Ao confirmar, o número selecionado ficará reservado por 30 minutos.
-                </div>
-                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors">
-                    Reservar Meu Número
-                </button>
-            </form>
+          </div>
+          <span
+            id="copy-message"
+            class="text-sm font-semibold text-green-600 hidden"
+            >Copiado!</span
+          >
+
+          <p class="font-bold text-lg text-sky-600 mb-2">
+            Envie o comprovante para:
+          </p>
+          <a href="http://wa.me/558694182707">
+            <p class="text-2xl font-bold text-green-800 mb-4">
+              +55 86 9418-2707
+            </p>
+          </a>
+          <p class="text-sm text-gray-500">
+            Não esqueça de informar o número da rifa no comprovante.
+          </p>
         </div>
+      </div>
     </div>
 
-    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-5xl w-full">
-        <header class="bg-sky-600 text-white p-8 text-center rounded-t-3xl">
-            <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight">Concorra a um <span class="text-sky-200">{{ rifa.premio }}</span>!</h1>
-            <p class="mt-2 text-lg sm:text-xl font-light">Garanta sua sorte na nossa rifa de {{ rifa.total_pontos }} números!</p>
-        </header>
+    <div
+      class="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-5xl w-full"
+    >
+      <header class="bg-sky-600 text-white p-8 text-center rounded-t-3xl">
+        <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight">
+          Concorra a um <span class="text-sky-200">{{ rifa.premio }}</span>!
+        </h1>
+        <p class="mt-2 text-lg sm:text-xl font-light">
+          Rifa de formatura do Isaac Mousaniel. Garanta sua sorte e ajude a
+          pagar a formatura!
+        </p>
+      </header>
 
-        <main class="p-8">
-            <div class="grid md:grid-cols-2 gap-8 items-center mb-8">
-                <div>
-                    <img src="https://placehold.co/800x600/60a5fa/ffffff?text=Espaço+para+a+Imagem+do+Prêmio" alt="Imagem do prêmio da rifa" class="rounded-2xl shadow-lg w-full">
-                </div>
-                <div class="space-y-4">
-                    <div class="flex items-center space-x-2 text-xl font-semibold text-gray-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Sorteio: <span id="draw-date" class="font-bold">{{ rifa.data_sorteio }}</span></span>
-                    </div>
-                    <div class="flex items-center space-x-2 text-xl font-semibold text-gray-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <span>Valor: <span class="font-bold text-sky-600">R$ {{ '{:.2f}'.format(rifa.valor_ponto) }}</span> por bilhete</span>
-                    </div>
-                    <div class="bg-gray-100 p-4 rounded-xl shadow-inner border border-gray-200 text-gray-600">
-                        <p class="font-semibold mb-2">Regras do Sorteio:</p>
-                        <p class="text-sm">O ganhador será o número que coincidir com os dois últimos dígitos do 1º prêmio da Loteria Federal, no dia do sorteio.</p>
-                    </div>
-                </div>
+      <main class="p-8">
+        <div class="grid md:grid-cols-2 gap-8 items-center mb-8">
+          <div class="space-y-4">
+            <div
+              class="flex items-center space-x-2 text-xl font-semibold text-gray-700"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-sky-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span
+                >Sorteio:
+                <span id="draw-date" class="font-bold"
+                  >{{ rifa.data_sorteio }}</span
+                ></span
+              >
             </div>
+            <div
+              class="flex items-center space-x-2 text-xl font-semibold text-gray-700"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-sky-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+              <span
+                >Valor:
+                <span class="font-bold text-sky-600"
+                  >R$ {{ '{:.2f}'.format(rifa.valor_ponto) }}</span
+                >
+                por bilhete</span
+              >
+            </div>
+            <div
+              class="bg-gray-100 p-4 rounded-xl shadow-inner border border-gray-200 text-gray-600"
+            >
+              <p class="font-semibold mb-2">Sobre a Rifa:</p>
+              <p class="text-sm">
+                Todo o valor arrecadado será usado para custear os gastos com a
+                formatura do Isaac Mousaniel. Sua ajuda é fundamental!
+              </p>
+            </div>
+            <div class="text-center mt-8"></div>
+          </div>
+        </div>
 
-            <div class="flex justify-center space-x-4 mb-8 text-sm font-semibold">
-                <div class="flex items-center space-x-1">
-                    <span class="w-4 h-4 rounded-full bg-green-500"></span>
-                    <span>Disponível</span>
-                </div>
-                <div class="flex items-center space-x-1">
-                    <span class="w-4 h-4 rounded-full bg-yellow-400"></span>
-                    <span>Reservado</span>
-                </div>
-                <div class="flex items-center space-x-1">
-                    <span class="w-4 h-4 rounded-full bg-red-500"></span>
-                    <span>Vendido</span>
-                </div>
-            </div>
+        <div class="flex justify-center space-x-4 mb-8 text-sm font-semibold">
+          <div class="flex items-center space-x-1">
+            <span class="w-4 h-4 rounded-full bg-green-500"></span>
+            <span>Disponível</span>
+          </div>
+          <div class="flex items-center space-x-1">
+            <span class="w-4 h-4 rounded-full bg-yellow-400"></span>
+            <span>Reservado</span>
+          </div>
+          <div class="flex items-center space-x-1">
+            <span class="w-4 h-4 rounded-full bg-red-500"></span>
+            <span>Vendido</span>
+          </div>
+        </div>
 
-            <div id="numbers-grid" class="grid grid-cols-5 sm:grid-cols-10 gap-3">
-                {% for numero in numeros %}
-                    <div class="number-card text-center p-3 rounded-lg text-white font-bold text-lg shadow-sm
-                        {% if numero.status == 'available' %}
-                            bg-green-500 hover:bg-green-600 cursor-pointer
-                        {% elif numero.status == 'reserved' %}
-                            bg-yellow-400 cursor-not-allowed
-                        {% else %}
-                            bg-red-500 cursor-not-allowed
-                        {% endif %}
-                    " data-number="{{ numero.numero }}">
-                        {{ numero.numero }}
-                    </div>
-                {% endfor %}
-            </div>
-        </main>
+        <div
+          class="flex flex-wrap justify-center space-x-2 space-y-2 sm:space-y-0 mb-8"
+          id="filter-buttons"
+        >
+          <button
+            class="bg-gray-200 text-gray-800 font-semibold px-4 py-2 rounded-full hover:bg-gray-300 transition-colors"
+            data-filter="all"
+          >
+            Todos
+          </button>
+          <button
+            class="bg-green-500 text-white font-semibold px-4 py-2 rounded-full hover:bg-green-600 transition-colors"
+            data-filter="available"
+          >
+            Disponível
+          </button>
+          <button
+            class="bg-yellow-400 text-white font-semibold px-4 py-2 rounded-full hover:bg-yellow-500 transition-colors"
+            data-filter="reserved"
+          >
+            Reservado
+          </button>
+          <button
+            class="bg-red-500 text-white font-semibold px-4 py-2 rounded-full hover:bg-red-600 transition-colors"
+            data-filter="sold"
+          >
+            Vendido
+          </button>
+        </div>
+
+        <div id="numbers-grid" class="grid grid-cols-5 sm:grid-cols-10 gap-3">
+          {% for numero in numeros %}
+          <div
+            class="number-card text-center p-3 rounded-lg text-white font-bold text-lg shadow-sm {% if numero.status == 'available' %} bg-green-500 hover:bg-green-600 cursor-pointer {% elif numero.status == 'reserved' %} bg-yellow-400 cursor-not-allowed {% else %} bg-red-500 cursor-not-allowed {% endif %}"
+            data-number="{{ numero.numero }}"
+            data-status="{{ numero.status }}"
+          >
+            {{ numero.numero }}
+          </div>
+          {% endfor %}
+        </div>
+      </main>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const numbersGrid = document.getElementById('numbers-grid');
-            const purchaseModal = document.getElementById('purchase-modal');
-            const closeModalBtn = document.getElementById('close-modal');
-            const purchaseForm = document.getElementById('purchase-form');
-            const selectedNumbersDisplay = document.getElementById('selected-numbers-display');
-            
-            let selectedNumber = null;
+      document.addEventListener('DOMContentLoaded', () => {
+        const numbersGrid = document.getElementById('numbers-grid');
+        const purchaseModal = document.getElementById('purchase-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const purchaseForm = document.getElementById('purchase-form');
+        const paymentInfo = document.getElementById('payment-info');
+        const selectedNumbersDisplay = document.getElementById(
+          'selected-numbers-display'
+        );
+        const filterButtons = document.getElementById('filter-buttons');
 
-            // Manipula o clique nos números
-            numbersGrid.addEventListener('click', (event) => {
-                const numberCard = event.target.closest('.number-card');
-                if (numberCard && numberCard.classList.contains('cursor-pointer')) {
-                    selectedNumber = numberCard.dataset.number;
-                    selectedNumbersDisplay.textContent = `Número Selecionado: ${selectedNumber}`;
-                    purchaseModal.classList.remove('hidden');
-                    purchaseModal.classList.add('flex');
-                }
-            });
+        let selectedNumber = null;
 
-            // Fecha o modal
-            closeModalBtn.addEventListener('click', () => {
-                purchaseModal.classList.add('hidden');
-                purchaseModal.classList.remove('flex');
-                selectedNumber = null;
-            });
-
-            // Lida com o envio do formulário
-            purchaseForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const name = document.getElementById('name').value;
-                const phone = document.getElementById('phone').value;
-
-                if (!name || !phone) {
-                    alert('Por favor, preencha todos os campos.');
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/api/reservar', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            numero: selectedNumber,
-                            nome: name,
-                            whatsapp: phone
-                        }),
-                    });
-
-                    const result = await response.json();
-                    
-                    if (response.ok) {
-                        alert(result.mensagem);
-                        purchaseModal.classList.add('hidden');
-                        purchaseModal.classList.remove('flex');
-                        selectedNumber = null;
-                        
-                        // Atualiza o card na página após a reserva
-                        const numberElement = document.querySelector(`[data-number="${result.numero}"]`);
-                        if(numberElement){
-                           numberElement.classList.remove('bg-green-500', 'hover:bg-green-600', 'cursor-pointer');
-                           numberElement.classList.add('bg-yellow-400', 'cursor-not-allowed');
-                        }
-                    } else {
-                        alert(`Erro: ${result.error}`);
-                    }
-                } catch (error) {
-                    alert('Ocorreu um erro ao tentar reservar o número.');
-                    console.error('Erro:', error);
-                }
-            });
+        // Manipula o clique nos números
+        numbersGrid.addEventListener('click', (event) => {
+          const numberCard = event.target.closest('.number-card');
+          if (numberCard && numberCard.classList.contains('cursor-pointer')) {
+            selectedNumber = numberCard.dataset.number;
+            selectedNumbersDisplay.textContent = `Número Selecionado: ${selectedNumber}`;
+            purchaseModal.classList.remove('hidden');
+            purchaseModal.classList.add('flex');
+            purchaseForm.classList.remove('hidden');
+            paymentInfo.classList.add('hidden');
+          }
         });
-    </script>
-</body>
 
+        // Fecha o modal
+        closeModalBtn.addEventListener('click', () => {
+          purchaseModal.classList.add('hidden');
+          purchaseModal.classList.remove('flex');
+          selectedNumber = null;
+        });
+
+        // Lida com o envio do formulário
+        purchaseForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const name = document.getElementById('name').value;
+          const phone = document.getElementById('phone').value;
+
+          if (!name || !phone) {
+            alert('Por favor, preencha todos os campos.');
+            return;
+          }
+
+          try {
+            const response = await fetch('/api/reservar', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                numero: selectedNumber,
+                nome: name,
+                whatsapp: phone,
+              }),
+            });
+
+            if (response.ok) {
+              // Oculta o formulário e mostra as informações de pagamento
+              purchaseForm.classList.add('hidden');
+              paymentInfo.classList.remove('hidden');
+
+              // Atualiza o card na página após a reserva
+              const numberElement = document.querySelector(
+                `[data-number="${selectedNumber}"]`
+              );
+              if (numberElement) {
+                numberElement.classList.remove(
+                  'bg-green-500',
+                  'hover:bg-green-600',
+                  'cursor-pointer'
+                );
+                numberElement.classList.add(
+                  'bg-yellow-400',
+                  'cursor-not-allowed'
+                );
+                numberElement.dataset.status = 'reserved'; // Atualiza o data-status
+              }
+            } else {
+              // Se a resposta NÃO for OK (por exemplo, status 400 ou 500)
+              const result = await response.json();
+              alert(`Erro: ${result.error || 'Ocorreu um erro desconhecido.'}`);
+              console.error('Erro na API:', result.error);
+            }
+          } catch (error) {
+            alert('Ocorreu um erro ao tentar reservar o número.');
+            console.error('Erro:', error);
+          }
+        });
+
+        // Lógica de filtro
+        filterButtons.addEventListener('click', (event) => {
+          const filter = event.target.dataset.filter;
+          const numberCards = document.querySelectorAll('.number-card');
+
+          numberCards.forEach((card) => {
+            const status = card.dataset.status;
+            if (filter === 'all' || status === filter) {
+              card.style.display = 'block';
+            } else {
+              card.style.display = 'none';
+            }
+          });
+        });
+
+        // Lógica do botão de copiar PIX
+        const copyButton = document.getElementById('copy-button');
+        const pixCode = document.getElementById('pix-code');
+        const copyMessage = document.getElementById('copy-message');
+
+        if (copyButton && pixCode) {
+          copyButton.addEventListener('click', () => {
+            navigator.clipboard
+              .writeText(pixCode.textContent.trim())
+              .then(() => {
+                copyMessage.classList.remove('hidden');
+                setTimeout(() => {
+                  copyMessage.classList.add('hidden');
+                }, 2000);
+              })
+              .catch((err) => {
+                console.error('Erro ao copiar o código PIX:', err);
+              });
+          });
+        }
+      });
+    </script>
+  </body>
 </html>

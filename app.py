@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import requests
 
+
 app = Flask(__name__)
 
 # Configuração do banco de dados SQLite
@@ -137,31 +138,31 @@ def reservar_numero():
         numero.whatsapp_comprador = whatsapp
         numero.data_reserva = datetime.utcnow()
         db.session.commit()
-        
+
         # 2. Envia a mensagem para o bot do WhatsApp
         try:
             # Endereço da API do seu bot do WhatsApp
             # Altere a porta se o seu bot estiver rodando em outra
-            bot_api_url = 'http://127.0.0.1:3000/reserva'
-            
+            bot_api_url = 'http://64.181.171.161/bot/reserva'
+
             # Dados a serem enviados ao bot
             payload = {
-                "mensagem":f'''✅Nova Venda✅
+                "mensagem": f'''✅Nova Venda✅
 Número Reservado: {numero_str},
 Nome: {nome},
 Whatsapp: {whatsapp}'''
             }
-            
+
             # Faz a requisição POST para a API do bot
             response = requests.post(bot_api_url, json=payload)
-            response.raise_for_status() # Lança um erro para respostas HTTP ruins
-            
+            response.raise_for_status()  # Lança um erro para respostas HTTP ruins
+
             print('Mensagem enviada com sucesso para o bot.')
 
         except requests.exceptions.RequestException as e:
             # Em caso de erro, apenas o loga, sem impedir a reserva
             print(f'Erro ao enviar mensagem para o bot do WhatsApp: {e}')
-            
+
         return jsonify({'mensagem': f'Número {numero_str} reservado com sucesso!'})
     else:
         return jsonify({'error': f'Número {numero_str} não está disponível para reserva.'}), 409
@@ -179,6 +180,32 @@ def get_numeros():
     ]
     return jsonify(numeros_list)
 
+
+@app.route('/api/remove', methods=['POST'])
+def remover_numero():
+    data = request.json
+    id = data.get('id')
+
+    if not id:
+        return jsonify({'error': 'ID não fornecido'}), 400
+
+    numero_rifa = Numero.query.filter_by(numero=id).first()
+
+    if numero_rifa:
+        if numero_rifa.status == 'reserved':
+            numero_rifa.status = 'available'  # Você precisa mudar o status para 'available'
+            numero_rifa.nome_comprador = None  # Altere para None
+            numero_rifa.whatsapp_comprador = None  # Altere para None
+            # <--- CORREÇÃO AQUI. Altere para None.
+            numero_rifa.data_reserva = None
+            db.session.commit()
+            return jsonify({'mensagem': f'Número {numero_rifa.numero} resetado com sucesso!'}), 200
+        else:
+            return jsonify({'error': f'Número {numero_rifa.numero} não esta reservado.'}), 409
+    else:
+        return jsonify({'error': f'Número com ID {id} não encontrado.'}), 404
+
+
 @app.route('/api/confirmado', methods=['POST'])
 def confirmar_numero():
     data = request.json
@@ -190,7 +217,7 @@ def confirmar_numero():
     numero_rifa = Numero.query.filter_by(numero=id).first()
 
     if numero_rifa:
-        if  numero_rifa.status == 'reserved':
+        if numero_rifa.status == 'reserved':
             numero_rifa.status = 'sold'
             db.session.commit()
             return jsonify({'mensagem': f'Número {numero_rifa.numero} confirmado com sucesso!'}), 200
@@ -201,4 +228,4 @@ def confirmar_numero():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
